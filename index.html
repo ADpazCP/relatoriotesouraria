@@ -1,0 +1,497 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Relatório de Movimentação Financeira</title>
+    <style>
+        /* Estilos base e cores */
+        :root {
+            --green: #2e7d32;
+            --green-light: #81c784;
+            --red: #d32f2f;
+            --bg: #f9f9f9;
+            --shadow: 0 4px 12px rgba(0,0,0,0.08);
+        }
+        body {
+            font-family: Arial, Helvetica, sans-serif;
+            background: var(--bg);
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            justify-content: center;
+        }
+        
+        .main-container {
+            width: 100%;
+            max-width: 900px;
+        }
+
+        .main-header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        .main-header h1 {
+            margin: 0;
+            color: var(--green);
+            font-size: 24px;
+        }
+        .main-header h2 {
+            margin: 5px 0 0 0;
+            color: var(--green-light);
+            font-size: 16px;
+            font-weight: normal;
+        }
+
+        /* Estilos para a nova barra de filtros */
+        .filter-controls {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 15px;
+            padding: 20px;
+            background: #fff;
+            border: 1px solid #ccc;
+            border-radius: 8px;
+            margin-bottom: 30px;
+            box-shadow: var(--shadow);
+        }
+        .filter-group {
+            display: flex;
+            flex-direction: column;
+            flex: 1;
+            min-width: 150px;
+        }
+        .filter-group label {
+            font-size: 14px;
+            font-weight: bold;
+            color: var(--green);
+            margin-bottom: 5px;
+        }
+        .filter-group select, .filter-group input {
+            padding: 8px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            font-size: 14px;
+        }
+
+        .report-card {
+            background: #fff;
+            padding: 25px;
+            border: 2px solid var(--green);
+            border-radius: 10px;
+            box-shadow: var(--shadow);
+            margin-bottom: 30px;
+        }
+
+        .info-semana {
+            margin-bottom: 20px;
+            padding-bottom: 5px;
+            border-bottom: 1px solid #ccc;
+            font-weight: bold;
+            color: var(--green);
+        }
+        
+        .summary-section {
+            display: flex;
+            justify-content: space-between;
+            gap: 15px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+        }
+        .summary-item {
+            flex: 1;
+            min-width: 150px;
+            padding: 10px 15px;
+            border: 2px solid var(--green-light);
+            border-radius: 8px;
+            text-align: center;
+        }
+        .summary-item .label {
+            display: block;
+            font-weight: bold;
+            color: var(--green);
+            margin-bottom: 5px;
+        }
+        .summary-item .value {
+            font-size: 18px;
+            font-weight: bold;
+        }
+        
+        .green-text { color: var(--green); }
+        .red-text { color: var(--red); }
+
+        .table-section {
+            overflow-x: auto;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            min-width: 600px;
+        }
+        thead {
+            background: var(--green-light);
+            color: #fff;
+        }
+        th, td {
+            padding: 8px;
+            text-align: left;
+            border: 1px solid #ccc;
+            font-size: 14px;
+        }
+        th:nth-child(1), td:nth-child(1) { width: 15%; text-align: center; }
+        th:nth-child(3), td:nth-child(3) { width: 20%; text-align: center; }
+        th:nth-child(4), td:nth-child(4) { width: 15%; text-align: center; }
+        
+        .saida-row {
+            color: var(--red);
+            font-weight: bold;
+        }
+
+        .card-footer {
+            margin-top: 20px;
+            text-align: right;
+            font-style: italic;
+        }
+        .card-footer span {
+            display: block;
+            font-size: 14px;
+            color: #555;
+        }
+
+        .loading-message, .error-message, .no-data-message {
+            text-align: center;
+            font-size: 18px;
+            margin-top: 50px;
+            color: #555;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="main-container">
+        <header class="main-header">
+            <h1>MOVIMENTAÇÃO FINANCEIRA</h1>
+            <h2>RELATÓRIO DE ENTRADAS E SAÍDAS SEMANAIS</h2>
+        </header>
+
+        <div class="filter-controls">
+            <div class="filter-group">
+                <label for="filter-semana">Filtrar por Semana</label>
+                <select id="filter-semana">
+                    <option value="todos">Todas as Semanas</option>
+                </select>
+            </div>
+            <div class="filter-group">
+                <label for="filter-tipo">Filtrar por Tipo</label>
+                <select id="filter-tipo">
+                    <option value="todos">Todos</option>
+                    <option value="entrada">Entrada</option>
+                    <option value="saída">Saída</option>
+                </select>
+            </div>
+            <div class="filter-group">
+                <label for="filter-mes">Filtrar por Mês</label>
+                <select id="filter-mes">
+                    <option value="todos">Todos os Meses</option>
+                </select>
+            </div>
+            <div class="filter-group">
+                <label for="filter-movimentador">Filtrar por Nome</label>
+                <select id="filter-movimentador">
+                    <option value="todos">Todos</option>
+                </select>
+            </div>
+        </div>
+        <div id="relatorios-container">
+            <div class="loading-message">Carregando dados...</div>
+        </div>
+    </div>
+
+    <script>
+        // *** Substitua a URL abaixo pela URL do seu Deploy do Apps Script ***
+        const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbz3kBaCXGg5SDqDg_9kt9enAf58pywmfdQixqcQPEG90MV3_y1Irek4Sm4vqZ3oHSoo5A/exec";
+
+        // Variável global para armazenar os dados crus
+        let todosOsDados = [];
+
+        // Elementos dos filtros
+        const filterSemana = document.getElementById('filter-semana');
+        const filterTipo = document.getElementById('filter-tipo');
+        const filterMes = document.getElementById('filter-mes');
+        const filterMovimentador = document.getElementById('filter-movimentador');
+        const relatoriosContainer = document.getElementById('relatorios-container');
+
+        // Função para formatar valores monetários
+        const formatarValor = (valor) => `R$ ${Number(valor).toFixed(2).replace('.', ',')}`;
+
+        // Função principal para buscar, popular filtros e renderizar
+        async function init() {
+            try {
+                const response = await fetch(SCRIPT_URL);
+                if (!response.ok) {
+                    throw new Error('Erro na rede ou URL inválida.');
+                }
+                const data = await response.json();
+
+                if (!data.success) {
+                    throw new Error(data.message);
+                }
+                
+                // Armazena os dados brutos (todos os registros)
+                todosOsDados = data.registros;
+                
+                // Popula os menus de filtro com os dados da planilha
+                populateFilters(todosOsDados);
+                
+                // Renderiza o relatório inicial com todos os dados
+                applyFilters(); // Chama applyFilters para renderizar o estado inicial
+                
+            } catch (error) {
+                relatoriosContainer.innerHTML = `<div class="error-message">Erro ao carregar dados: ${error.message}. Verifique a URL e a conexão.</div>`;
+                console.error("Erro na busca de dados:", error);
+            }
+        }
+
+        // Função para preencher as opções dos filtros dinamicamente
+        function populateFilters(data) {
+            const semanas = new Set();
+            const meses = new Set();
+            const movimentadores = new Set();
+            
+            data.forEach(item => {
+                // CORREÇÃO 1 e 3: Ajuste para acessar 'semana ' e 'nome ' com espaço ou 'semana' e 'nome' sem espaço.
+                // Usamos .trim() para remover espaços em branco do início/fim se houver.
+                // Verifica a existência antes de adicionar ao Set.
+                const semanaValue = (item['semana '] || item.semana || '').trim();
+                if (semanaValue) semanas.add(semanaValue);
+
+                const nomeValue = (item['nome '] || item.nome || '').trim();
+                if (nomeValue) movimentadores.add(nomeValue);
+                
+                // Extrai o mês do campo 'data_hora'
+                try {
+                    // CORREÇÃO: Verifica se 'data_hora' ou 'data_hora ' existe e é válido
+                    const rawDate = item['data_hora '] || item.data_hora;
+                    if (rawDate) {
+                        const dataObj = new Date(rawDate);
+                        // Verifica se a data é válida antes de formatar
+                        if (!isNaN(dataObj.getTime())) {
+                            const mes = dataObj.toLocaleString('pt-BR', { month: 'long', year: 'numeric' });
+                            meses.add(mes);
+                        } else {
+                             console.warn("Data inválida para 'data_hora':", rawDate);
+                        }
+                    }
+                } catch (e) {
+                    console.warn("Erro ao parsear data_hora:", item['data_hora '] || item.data_hora, e);
+                }
+            });
+
+            // Popula Semanas
+            filterSemana.innerHTML = '<option value="todos">Todas as Semanas</option>'; // Limpa e adiciona opção padrão
+            Array.from(semanas).sort().forEach(s => {
+                const option = document.createElement('option');
+                option.value = s;
+                option.textContent = s;
+                filterSemana.appendChild(option);
+            });
+
+            // Popula Meses (ordenado)
+            filterMes.innerHTML = '<option value="todos">Todos os Meses</option>'; // Limpa e adiciona opção padrão
+            Array.from(meses).sort((a,b) => {
+                // Função de comparação para ordenar os meses corretamente
+                try {
+                    const dateA = new Date(a.replace(/(\w+)\s+(\d{4})/, "1 $1 $2")); // Ajusta para "1 Mês Ano"
+                    const dateB = new Date(b.replace(/(\w+)\s+(\d{4})/, "1 $1 $2"));
+                    return dateA - dateB;
+                } catch (e) {
+                    return 0; // Em caso de erro, mantém a ordem original
+                }
+            }).forEach(m => {
+                const option = document.createElement('option');
+                option.value = m;
+                option.textContent = m;
+                filterMes.appendChild(option);
+            });
+
+            // Popula Movimentadores (ordenado alfabeticamente)
+            filterMovimentador.innerHTML = '<option value="todos">Todos</option>'; // Limpa e adiciona opção padrão
+            Array.from(movimentadores).sort().forEach(mov => {
+                const option = document.createElement('option');
+                option.value = mov;
+                option.textContent = mov;
+                filterMovimentador.appendChild(option);
+            });
+        }
+
+        // Função para aplicar os filtros e renderizar o relatório
+        function applyFilters() {
+            let dadosFiltrados = [...todosOsDados]; // Começa com todos os dados
+
+            const selectedSemana = filterSemana.value;
+            const selectedTipo = filterTipo.value;
+            const selectedMes = filterMes.value;
+            const selectedMovimentador = filterMovimentador.value;
+
+            if (selectedSemana !== 'todos') {
+                // CORREÇÃO 3: Comparação da semana
+                dadosFiltrados = dadosFiltrados.filter(item => (item['semana '] || item.semana || '').trim() === selectedSemana);
+            }
+            if (selectedTipo !== 'todos') {
+                dadosFiltrados = dadosFiltrados.filter(item => (item.tipomovimento || '').toLowerCase() === selectedTipo);
+            }
+            if (selectedMes !== 'todos') {
+                dadosFiltrados = dadosFiltrados.filter(item => {
+                    try {
+                        const rawDate = item['data_hora '] || item.data_hora;
+                        if (rawDate) {
+                            const dataObj = new Date(rawDate);
+                            if (!isNaN(dataObj.getTime())) {
+                                const mesItem = dataObj.toLocaleString('pt-BR', { month: 'long', year: 'numeric' });
+                                return mesItem === selectedMes;
+                            }
+                        }
+                        return false;
+                    } catch (e) {
+                        return false;
+                    }
+                });
+            }
+            if (selectedMovimentador !== 'todos') {
+                // CORREÇÃO 2: Comparação do nome do movimentador
+                dadosFiltrados = dadosFiltrados.filter(item => (item['nome '] || item.nome || '').trim() === selectedMovimentador);
+            }
+
+            renderReports(dadosFiltrados);
+        }
+
+        // Função para renderizar o relatório com os dados corretos
+        function renderReports(dataToRender) {
+            relatoriosContainer.innerHTML = ''; // Limpa o conteúdo
+
+            if (dataToRender.length === 0) {
+                relatoriosContainer.innerHTML = '<div class="no-data-message">Nenhum registro encontrado para os filtros selecionados.</div>';
+                return;
+            }
+
+            // Agrupar os dados por semana (como no código anterior)
+            const dadosPorSemana = dataToRender.reduce((acc, current) => {
+                // CORREÇÃO 3: Usar .trim() e verificar ambas as chaves
+                const semana = (current['semana '] || current.semana || 'Semana Não Definida').trim();
+                if (!acc[semana]) {
+                    acc[semana] = {
+                        registros: [],
+                        totais: { entradas: 0, saidas: 0, saldo: 0 }
+                    };
+                }
+                acc[semana].registros.push(current);
+
+                const valor = Number(current.valordoc) || 0;
+                if (current.tipomovimento.toLowerCase() === "entrada") {
+                    acc[semana].totais.entradas += valor;
+                } else if (current.tipomovimento.toLowerCase() === "saída" || current.tipomovimento.toLowerCase() === "saida") {
+                    acc[semana].totais.saidas += valor;
+                }
+                acc[semana].totais.saldo = acc[semana].totais.entradas - acc[semana].totais.saidas;
+                
+                return acc;
+            }, {});
+
+            // Criar um cartão para cada semana
+            // Para garantir uma ordem consistente, podemos ordenar as chaves do objeto dadosPorSemana
+            const semanasOrdenadas = Object.keys(dadosPorSemana).sort();
+
+            semanasOrdenadas.forEach(semana => { // Itera pelas semanas ordenadas
+                const relatorioSemana = dadosPorSemana[semana];
+                const totais = relatorioSemana.totais;
+
+                let tableRows = '';
+                relatorioSemana.registros.forEach(mov => {
+                    const isSaida = (mov.tipomovimento || '').toLowerCase() === 'saída' || (mov.tipomovimento || '').toLowerCase() === 'saida';
+                    
+                    // CORREÇÃO 1: Tipo de movimento em maiúsculas
+                    const tipoMovimentoDisplay = (mov.tipomovimento || '').toUpperCase();
+                    
+                    // MODIFICAÇÃO: Exibir a descrição em CAIXA ALTA
+                    const descricaoDisplay = (mov.descricao || '').toUpperCase();
+                    
+                    tableRows += `
+                        <tr class="${isSaida ? 'saida-row' : ''}">
+                            <td>${tipoMovimentoDisplay}</td>
+                            <td>${descricaoDisplay}</td>
+                            <td>${mov.numerodoc || ''}</td>
+                            <td>${formatarValor(mov.valordoc || 0)}</td>
+                        </tr>
+                    `;
+                });
+                
+                // Pega a primeira data e o primeiro movimentador do grupo para o rodapé do cartão
+                const primeiraDataRaw = relatorioSemana.registros[0]['data_hora '] || relatorioSemana.registros[0].data_hora;
+                const primeiraData = primeiraDataRaw && !isNaN(new Date(primeiraDataRaw).getTime()) ? new Date(primeiraDataRaw).toLocaleDateString('pt-BR') : 'Data Indefinida';
+                
+                // CORREÇÃO 2: Acessar 'nome ' ou 'nome' e usar .trim()
+                const primeiroMovimentador = (relatorioSemana.registros[0]['nome '] || relatorioSemana.registros[0].nome || 'Movimentador Indefinido').trim();
+
+                const cardHtml = `
+                    <div class="report-card">
+                        <section class="info-semana">
+                            <span>Semana: ${semana}</span>
+                        </section>
+
+                        <section class="summary-section">
+                            <div class="summary-item">
+                                <span class="label">Total Entradas:</span>
+                                <span class="value green-text">${formatarValor(totais.entradas)}</span>
+                            </div>
+                            <div class="summary-item">
+                                <span class="label">Total Saídas:</span>
+                                <span class="value red-text">${formatarValor(totais.saidas)}</span>
+                            </div>
+                            <div class="summary-item">
+                                <span class="label">Saldo:</span>
+                                <span class="value">${formatarValor(totais.saldo)}</span>
+                            </div>
+                        </section>
+
+                        <section class="table-section">
+                            <table>
+                                <thead>
+                                    <tr>
+                                        <th>TIPO</th>
+                                        <th>DESCRIÇÃO DA MOVIMENTAÇÃO</th>
+                                        <th>DOC Nº</th>
+                                        <th>VALOR</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    ${tableRows}
+                                </tbody>
+                            </table>
+                        </section>
+                        
+                        <footer class="card-footer">
+                            <span id="data-relatorio">${primeiraData}</span>
+                            <span id="nome-movimentador">"${primeiroMovimentador}"</span>
+                        </footer>
+                    </div>
+                `;
+                relatoriosContainer.innerHTML += cardHtml;
+            });
+        }
+
+        // Adiciona listeners para os filtros
+        function addFilterListeners() {
+            filterSemana.addEventListener('change', applyFilters);
+            filterTipo.addEventListener('change', applyFilters);
+            filterMes.addEventListener('change', applyFilters);
+            filterMovimentador.addEventListener('change', applyFilters);
+        }
+        
+        // Inicia o processo quando a página é carregada
+        document.addEventListener('DOMContentLoaded', () => {
+            init(); // Busca os dados, popula filtros e renderiza o relatório
+            addFilterListeners(); // Adiciona os listeners APÓS os filtros serem populados
+        });
+    </script>
+</body>
+</html>
